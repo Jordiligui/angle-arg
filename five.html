@@ -61,10 +61,19 @@ folded between the lines.
 </p>
 
 <p>
-<span class="hoverhide">
-<a href="aside.html">It is better if you do not open this.</a>
-</span>
+  <span class="hoverhide">Hound</span>
 </p>
+
+<style>
+.hoverhide {
+    color: #000000; /* fully invisible on black background */
+    transition: color 0.3s ease;
+    cursor: default; /* not a link */
+}
+.hoverhide:hover {
+    color: #6ec7ff; /* appears on hover */
+}
+</style>
 
 <p>
 The next angle isn’t hidden.<br>
