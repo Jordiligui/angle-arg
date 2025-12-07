@@ -13,17 +13,13 @@
         }
 
         .hoverhide {
-            color: #000000; /* invisible */
+            color: #000000; /* invisible on black background */
             transition: color 0.3s ease;
+            cursor: default; /* not a link */
         }
 
         .hoverhide:hover {
-            color: #6ec7ff; /* becomes visible on hover */
-        }
-
-        a {
-            color: #6ec7ff;
-            text-decoration: none;
+            color: #6ec7ff; /* appears on hover */
         }
     </style>
 </head>
@@ -61,19 +57,8 @@ folded between the lines.
 </p>
 
 <p>
-  <span class="hoverhide">Hound</span>
+<span class="hoverhide">Hound</span>
 </p>
-
-<style>
-.hoverhide {
-    color: #000000; /* fully invisible on black background */
-    transition: color 0.3s ease;
-    cursor: default; /* not a link */
-}
-.hoverhide:hover {
-    color: #6ec7ff; /* appears on hover */
-}
-</style>
 
 <p>
 The next angle isn’t hidden.<br>
