@@ -11,6 +11,8 @@
             padding: 50px;
             line-height: 1.8;
             white-space: pre-wrap;
+            position: relative;
+            min-height: 100vh;
         }
 
         h1, h2 {
@@ -45,6 +47,22 @@
             font-style: italic;
             margin-top: 20px;
         }
+
+        /* The added "Truth.html" line */
+        .truth {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #5c4b2a;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        .truth:hover {
+            opacity: 1;
+            color: #c9b27a;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -78,5 +96,9 @@ and in their jaws, all things become <u>inevitable</u>."
 
 </div>
 
+<!-- Added line -->
+<div class="truth">Truth.html</div>
+
 </body>
 </html>
+
