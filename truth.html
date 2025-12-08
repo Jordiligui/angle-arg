@@ -1,0 +1,350 @@
+<!-- Save this as creepy.html and open in your browser -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>They Are About To Get You</title>
+  <style>
+    :root{
+      --bg:#050406;
+      --red:#ff1f3a;
+      --muted:#8a8a8a;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      background: radial-gradient(circle at 20% 10%, rgba(255,0,0,0.04), transparent 6%),
+                  radial-gradient(circle at 80% 90%, rgba(255,0,0,0.03), transparent 8%),
+                  var(--bg);
+      font-family: "Courier New", Courier, monospace;
+      overflow:hidden;
+      color:var(--red);
+      -webkit-user-select:none;
+      user-select:none;
+    }
+
+    /* center overlay controls */
+    .controls{
+      position:fixed;
+      top:12px;
+      left:12px;
+      z-index:9999;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      background:rgba(0,0,0,0.25);
+      padding:8px;
+      border-radius:8px;
+      backdrop-filter:blur(4px);
+    }
+    .controls button{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.08);
+      color:var(--muted);
+      padding:6px 10px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .controls button.active{ color:var(--red); border-color:var(--red); }
+
+    /* area holding the repeating phrases */
+    #stage{
+      position:relative;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+    }
+
+    .phrase{
+      position:absolute;
+      white-space:nowrap;
+      font-size:clamp(18px, 4vw, 72px);
+      line-height:1;
+      font-weight:700;
+      text-transform:uppercase;
+      pointer-events:none;
+      transform-origin:center;
+      mix-blend-mode:screen;
+      animation:float 6s linear infinite;
+      letter-spacing:2px;
+      text-shadow:
+         0 0 2px rgba(255,255,255,0.02),
+         0 0 6px rgba(255,0,0,0.06);
+    }
+
+    /* flicker/glitch */
+    @keyframes glitch {
+      0% { clip-path: inset(0 0 0 0); transform:translate(0,0); opacity:1; }
+      5% { clip-path: inset(20% 0 60% 0); transform:translate(-2px,-1px) skewX(-1deg); opacity:.85; }
+      10%{ clip-path: inset(10% 0 70% 0); transform:translate(2px,1px) skewX(2deg); opacity:.9; }
+      15%{ clip-path: inset(0 0 0 0); transform:translate(0,0); opacity:1; }
+      100%{ clip-path: inset(0 0 0 0); transform:translate(0,0); opacity:1;}
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0) rotate(0deg) scale(1); opacity:1; filter:blur(0); }
+      50% { transform: translateY(-8px) rotate(-0.4deg) scale(1.02); opacity:0.95; }
+      100% { transform: translateY(0) rotate(0deg) scale(1); opacity:1; filter:blur(0); }
+    }
+
+    /* occasional global screen shake */
+    .shake {
+      animation: screen-shake 0.6s linear;
+    }
+    @keyframes screen-shake {
+      0%{ transform:translate(0,0); }
+      20%{ transform:translate(-6px,2px) rotate(-0.5deg); }
+      40%{ transform:translate(5px,-3px) rotate(0.5deg); }
+      60%{ transform:translate(-3px,2px) rotate(-0.3deg); }
+      80%{ transform:translate(2px,-1px) rotate(0.2deg); }
+      100%{ transform:translate(0,0); }
+    }
+
+    /* subtle overlay "eyes" */
+    .eyes{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      width:160px;
+      height:80px;
+      border-radius:12px;
+      opacity:0.06;
+      background:radial-gradient(circle at 30% 40%, rgba(255,0,0,0.4), transparent 12%),
+                 radial-gradient(circle at 70% 60%, rgba(255,0,0,0.45), transparent 12%);
+      z-index:10;
+      pointer-events:none;
+    }
+
+    /* accessibility: hide from screen readers (visual only) */
+    .aria-hidden{ position:absolute; left:-9999px; }
+
+    /* responsive tweaks */
+    @media (max-width:480px){
+      .controls{ top:8px; left:8px; padding:6px; gap:6px; }
+      .controls button{ font-size:12px; padding:5px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls" aria-hidden="true">
+    <button id="soundBtn">Enable Sound</button>
+    <button id="stopBtn">Stop</button>
+    <small style="color:var(--muted); margin-left:6px;">(Save as <code>creepy.html</code> — open in browser)</small>
+  </div>
+
+  <div id="stage" aria-hidden="true"></div>
+  <div class="eyes" aria-hidden="true"></div>
+
+  <!-- visible but minimal fallback text for screen readers -->
+  <p class="aria-hidden" role="note">A repeating creepy message display.</p>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const phrases = [];
+    const PHRASE = "THEY ARE ABOUT TO GET YOU";
+    let running = true;
+
+    // create an audio context and a low rumble beep (user gesture required to start sound)
+    let audioCtx = null;
+    let isSoundOn = false;
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.addEventListener('click', ()=>{
+      if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(!isSoundOn){
+        isSoundOn = true;
+        soundBtn.classList.add('active');
+        soundBtn.textContent = 'Sound: ON';
+        playCreepyTone();
+      } else {
+        isSoundOn = false;
+        soundBtn.classList.remove('active');
+        soundBtn.textContent = 'Enable Sound';
+      }
+    });
+
+    function playCreepyTone(){
+      if(!audioCtx || !isSoundOn) return;
+      // short dissonant cluster
+      const now = audioCtx.currentTime;
+      const dur = 1.6;
+      const freqs = [110, 140, 165]; // mildly dissonant cluster
+      freqs.forEach((f, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = ['sine','sawtooth','triangle'][i%3];
+        o.frequency.setValueAtTime(f, now);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.03, now+0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+        o.connect(g).connect(audioCtx.destination);
+        o.start(now + i*0.05);
+        o.stop(now + dur + i*0.05);
+      });
+      // schedule another tone later randomly
+      setTimeout(()=>{ if(isSoundOn) playCreepyTone(); }, 2200 + Math.random()*2800);
+    }
+
+    // utility to randomize ranges
+    function rand(min, max){ return Math.random()*(max-min)+min; }
+
+    // create initial phrases
+    function spawnPhrase(x, y, sizeFactor){
+      const el = document.createElement('div');
+      el.className = 'phrase';
+      el.textContent = PHRASE;
+      stage.appendChild(el);
+
+      // position & variation
+      const scale = sizeFactor || rand(0.75, 1.6);
+      const fs = Math.round(18 * scale);
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.fontSize = (fs + 'px');
+      el.style.opacity = rand(0.4, 1);
+      el.style.transform = `rotate(${rand(-6,6)}deg)`;
+      el.style.animationDuration = (rand(4,9) + 's');
+
+      // apply occasional glitch animation with varying timings
+      if(Math.random() < 0.35){
+        el.style.animationName = 'float, glitch';
+        el.style.animationDuration = `${rand(4,9)}s, ${rand(0.7,1.6)}s`;
+        el.style.animationTimingFunction = 'linear, steps(2,end)';
+        el.style.animationIterationCount = 'infinite, infinite';
+      }
+
+      // colored shadow layers for glitchy duplicate look
+      el.style.textShadow = `${rand(-2,2)}px ${rand(-1,1)}px 0 rgba(255,0,0,0.18), ${rand(1,3)}px ${rand(-2,2)}px 0 rgba(0,255,255,0.06)`;
+
+      // slowly drift
+      const vx = rand(-0.02, 0.02);
+      const vy = rand(-0.06, 0.06);
+
+      // store for animation loop
+      phrases.push({el, x, y, vx, vy});
+      return el;
+    }
+
+    // place a bunch of phrases across the screen
+    function fillInitial(){
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const count = Math.round((w*h)/30000); // density scales with window
+      for(let i=0;i<count;i++){
+        const x = rand(0, w - 200);
+        const y = rand(0, h - 60);
+        const sizeFactor = rand(0.9, 1.8);
+        spawnPhrase(x,y,sizeFactor);
+      }
+    }
+    fillInitial();
+
+    // keep adding new phrases at intervals, cluster sometimes
+    const spawner = setInterval(()=>{
+      if(!running) return;
+      // random cluster
+      const w = window.innerWidth, h = window.innerHeight;
+      if(Math.random() < 0.3){
+        // cluster near center
+        const cx = w*0.5 + rand(-200,200);
+        const cy = h*0.45 + rand(-200,200);
+        const n = Math.round(rand(4,10));
+        for(let i=0;i<n;i++){
+          spawnPhrase(cx + rand(-120,120), cy + rand(-80,80), rand(0.9,1.6));
+        }
+      } else {
+        spawnPhrase(rand(0, w-200), rand(0, h-60), rand(0.7,1.4));
+      }
+
+      // sometimes do a screen shake
+      if(Math.random() < 0.12){
+        document.body.classList.add('shake');
+        setTimeout(()=>document.body.classList.remove('shake'), 650);
+      }
+      // trim excessive phrases
+      if(phrases.length > 280){
+        const rem = phrases.splice(0, Math.min(30, Math.floor(phrases.length/8)));
+        rem.forEach(r => r.el.remove());
+      }
+    }, 900);
+
+    // animation loop to slowly drift elements and occasionally jitter them
+    function animate(){
+      for(const p of phrases){
+        // update positions
+        p.x += p.vx;
+        p.y += p.vy;
+        // small boundary wrap
+        const w = window.innerWidth, h = window.innerHeight;
+        if(p.x < -300) p.x = w + rand(0,80);
+        if(p.x > w + 300) p.x = -rand(0,300);
+        if(p.y < -200) p.y = h + rand(0,80);
+        if(p.y > h + 200) p.y = -rand(0,200);
+        p.el.style.left = p.x + 'px';
+        p.el.style.top = p.y + 'px';
+
+        // occasional quick jitter for some elements
+        if(Math.random() < 0.0009){
+          p.el.style.transform = `translate(${rand(-18,18)}px,${rand(-12,12)}px) rotate(${rand(-10,10)}deg) scale(${rand(0.96,1.12)})`;
+          setTimeout(()=>{ p.el.style.transform = `rotate(${rand(-6,6)}deg)`; }, 140 + Math.random()*400);
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // Stop button to clear effects
+    const stopBtn = document.getElementById('stopBtn');
+    stopBtn.addEventListener('click', ()=>{
+      running = false;
+      clearInterval(spawner);
+      // remove most elements gently
+      for(const p of phrases){ p.el.remove(); }
+      phrases.length = 0;
+      // set a simple calm message
+      const calm = document.createElement('div');
+      calm.style.position='fixed';
+      calm.style.left='50%';
+      calm.style.top='50%';
+      calm.style.transform='translate(-50%,-50%)';
+      calm.style.color='rgba(255,255,255,0.85)';
+      calm.style.fontFamily='system-ui,Arial,Helvetica,sans-serif';
+      calm.style.fontSize='20px';
+      calm.style.background='rgba(0,0,0,0.5)';
+      calm.style.padding='18px 22px';
+      calm.style.borderRadius='10px';
+      calm.style.backdropFilter='blur(4px)';
+      calm.textContent = 'Stopped. You are safe.';
+      document.body.appendChild(calm);
+    });
+
+    // add a small friendly hint if someone tries to select text (just visual)
+    document.addEventListener('selectionchange', ()=>{
+      if(document.getSelection().toString().length > 0){
+        // spawn a tiny phrase at mouse position as a playful "nope"
+        const evt = {clientX: window.innerWidth*0.5, clientY: window.innerHeight*0.5};
+        spawnPhrase(rand(10,200), rand(10,120), 0.9);
+      }
+    });
+
+    // resize handler
+    window.addEventListener('resize', ()=>{ /* no-op; elements wrap naturally */ });
+
+    // initial subtle pulse/glow
+    setInterval(()=> {
+      document.body.style.transition = 'filter 0.6s';
+      document.body.style.filter = `brightness(${rand(0.95,1.07)})`;
+    }, 1200);
+
+    // unlock audio on first user gesture silently (if user clicked sound button we already created audio)
+    window.addEventListener('click', ()=>{
+      if(audioCtx && audioCtx.state === 'suspended' && isSoundOn){
+        audioCtx.resume();
+      }
+    }, {once:true});
+  </script>
+</body>
+</html>
